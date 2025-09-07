@@ -1,58 +1,124 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Secret Chat 😎</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Secret Chat</title>
   <style>
-    body { font-family: Arial; background:#111; color:#eee; }
-    #messages { height: 70vh; overflow-y: auto; padding: 10px; border:1px solid #333; }
-    #input { width: 80%; padding: 10px; }
-    #send { padding: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+    }
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+    #chat div {
+      margin: 5px 0;
+    }
+    #input {
+      display: flex;
+      border-top: 1px solid #333;
+    }
+    #input input {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      outline: none;
+      background: #1e1e1e;
+      color: #eee;
+    }
+    #input button {
+      padding: 10px 20px;
+      background: #6200ea;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+    #input button:hover {
+      background: #3700b3;
+    }
   </style>
 </head>
 <body>
-  <h2>Secret Chat 😜</h2>
-  <div id="messages"></div>
-  <input id="input" placeholder="Type a message..."/>
-  <button id="send">Send</button>
+  <div id="chat"></div>
+  <div id="input">
+    <input id="nickname" placeholder="Your nickname" style="max-width:150px;" />
+    <input id="message" placeholder="Type a message..." />
+    <button id="send">Send</button>
+  </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
-  <script>
-    // 👉 paste your Firebase config here
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    // Your Firebase config
     const firebaseConfig = {
-      apiKey: "AIza...",
-      authDomain: "yourapp.firebaseapp.com",
-      databaseURL: "https://yourapp.firebaseio.com",
-      projectId: "yourapp",
-      storageBucket: "yourapp.appspot.com",
-      messagingSenderId: "1234567890",
-      appId: "1:1234567890:web:abcdef"
+      apiKey: "AIzaSyDi6kx4nSM0leIsQ0m9UxqBlE699nozUBs",
+      authDomain: "link-37ce7.firebaseapp.com",
+      databaseURL: "https://link-37ce7-default-rtdb.firebaseio.com",
+      projectId: "link-37ce7",
+      storageBucket: "link-37ce7.firebasestorage.app",
+      messagingSenderId: "864342278827",
+      appId: "1:864342278827:web:81059b56b947df8ad2adee",
+      measurementId: "G-6B40R1LXJ1"
     };
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    const msgBox = document.getElementById("messages");
-    const input = document.getElementById("input");
-    const sendBtn = document.getElementById("send");
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Room handling from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const room = urlParams.get('room') || 'default';
+
+    const chatRef = ref(db, 'rooms/' + room);
+
+    const chatDiv = document.getElementById('chat');
+    const messageInput = document.getElementById('message');
+    const nicknameInput = document.getElementById('nickname');
+    const sendBtn = document.getElementById('send');
+
+    // Save nickname locally
+    nicknameInput.value = localStorage.getItem('nickname') || '';
+    nicknameInput.addEventListener('change', () => {
+      localStorage.setItem('nickname', nicknameInput.value);
+    });
 
     // Send message
-    sendBtn.onclick = () => {
-      const text = input.value.trim();
+    function sendMessage() {
+      const text = messageInput.value.trim();
+      const name = nicknameInput.value.trim() || 'Anon';
       if (text) {
-        db.ref("messages").push({ text, time: Date.now() });
-        input.value = "";
+        push(chatRef, {
+          name: name,
+          text: text,
+          time: Date.now()
+        });
+        messageInput.value = '';
       }
-    };
+    }
 
-    // Receive messages live
-    db.ref("messages").on("child_added", snap => {
-      const data = snap.val();
-      const div = document.createElement("div");
-      div.textContent = data.text;
-      msgBox.appendChild(div);
-      msgBox.scrollTop = msgBox.scrollHeight;
+    sendBtn.onclick = sendMessage;
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    // Listen for new messages
+    const q = query(chatRef, limitToLast(200));
+    onChildAdded(q, (snapshot) => {
+      const msg = snapshot.val();
+      const div = document.createElement('div');
+      const date = new Date(msg.time).toLocaleTimeString();
+      div.textContent = `[${date}] ${msg.name}: ${msg.text}`;
+      chatDiv.appendChild(div);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
     });
   </script>
 </body>
-  </html>
+</html>
